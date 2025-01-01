@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -23,7 +24,8 @@ func main() {
 	client := pb.NewGreeterClient(conn)
 
 	// Call the function to stream stock prices
-	CallStreamStockPricesClient(client)
+	// CallStreamStockPricesClient(client)
+	CallStreamStockBiServer(client)
 
 }
 func CallStreamStockPricesClient(client pb.GreeterClient) {
@@ -60,11 +62,11 @@ func CallStreamStockPricesClient(client pb.GreeterClient) {
 	log.Printf("Server response: %s", response.Message)
 }
 
-func CallStreamStockPrices(client pb.GreeterClient) {
+func CallStreamStockPricesServer(client pb.GreeterClient) {
 	// Request to stream stock prices
 	fmt.Println("------------------------------")
 	req := &pb.StockRequest{StockSymbol: "AAPL"}
-	stream, err := client.StreamStockPrices(context.Background(), req)
+	stream, err := client.StreamStockPricesServer(context.Background(), req)
 	if err != nil {
 		log.Fatalf("Error while calling StreamStockPrices: %v", err)
 	}
@@ -79,4 +81,55 @@ func CallStreamStockPrices(client pb.GreeterClient) {
 		log.Printf("Received stock price: %s - $%.2f at %s", res.StockSymbol, res.Price, res.Timestamp)
 	}
 	time.Sleep(2 * time.Second)
+}
+
+
+func CallStreamStockBiServer(client pb.GreeterClient){
+	stream, err := client.StreamStockPricesBi(context.Background())
+    if err != nil {
+        log.Fatalf("Failed to create stream: %v", err)
+    }
+
+    // Sending data to the server
+    go func() {
+        stocks := []struct {
+            symbol string
+            price  float32
+        }{
+            {"AAPL", 150.25},
+            {"GOOGL", 2800.50},
+            {"AMZN", 3450.75},
+            {"MSFT", 299.99},
+        }
+
+        for _, stock := range stocks {
+            log.Printf("Sending stock: %s with price: %.2f", stock.symbol, stock.price)
+            if err := stream.Send(&pb.StockRequestT{
+                StockSymbol: stock.symbol,
+                Price:       stock.price,
+            }); err != nil {
+                log.Fatalf("Failed to send stock: %v", err)
+            }
+            time.Sleep(1 * time.Second)
+        }
+        stream.CloseSend()
+    }()
+
+    // Receiving data from the server
+    go func() {
+        for {
+            res, err := stream.Recv()
+            if err == io.EOF {
+                log.Println("Server finished sending data.")
+                break
+            }
+            if err != nil {
+                log.Fatalf("Error receiving data: %v", err)
+            }
+            log.Printf("Received from server: %s", res.Message)
+        }
+    }()
+
+    // Wait to finish
+    time.Sleep(10 * time.Second)
 }

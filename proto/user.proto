@@ -5,8 +5,9 @@ package example;
 
 service Greeter {
     rpc SayHello (HelloRequest) returns (HelloReply);
-    rpc StreamStockPrices(StockRequest) returns (stream StockResponse);
+    rpc StreamStockPricesServer(StockRequest) returns (stream StockResponse);
     rpc StreamStockPricesClient (stream StockRequestT) returns (StockResponseT);
+    rpc StreamStockPricesBi (stream StockRequestT) returns (stream StockResponseT);
 }
 
 message HelloRequest {

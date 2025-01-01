@@ -20,8 +20,9 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Greeter_SayHello_FullMethodName                = "/example.Greeter/SayHello"
-	Greeter_StreamStockPrices_FullMethodName       = "/example.Greeter/StreamStockPrices"
+	Greeter_StreamStockPricesServer_FullMethodName = "/example.Greeter/StreamStockPricesServer"
 	Greeter_StreamStockPricesClient_FullMethodName = "/example.Greeter/StreamStockPricesClient"
+	Greeter_StreamStockPricesBi_FullMethodName     = "/example.Greeter/StreamStockPricesBi"
 )
 
 // GreeterClient is the client API for Greeter service.
@@ -29,8 +30,9 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GreeterClient interface {
 	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
-	StreamStockPrices(ctx context.Context, in *StockRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StockResponse], error)
+	StreamStockPricesServer(ctx context.Context, in *StockRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StockResponse], error)
 	StreamStockPricesClient(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[StockRequestT, StockResponseT], error)
+	StreamStockPricesBi(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StockRequestT, StockResponseT], error)
 }
 
 type greeterClient struct {
@@ -51,9 +53,9 @@ func (c *greeterClient) SayHello(ctx context.Context, in *HelloRequest, opts ...
 	return out, nil
 }
 
-func (c *greeterClient) StreamStockPrices(ctx context.Context, in *StockRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StockResponse], error) {
+func (c *greeterClient) StreamStockPricesServer(ctx context.Context, in *StockRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StockResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Greeter_ServiceDesc.Streams[0], Greeter_StreamStockPrices_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Greeter_ServiceDesc.Streams[0], Greeter_StreamStockPricesServer_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +70,7 @@ func (c *greeterClient) StreamStockPrices(ctx context.Context, in *StockRequest,
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Greeter_StreamStockPricesClient = grpc.ServerStreamingClient[StockResponse]
+type Greeter_StreamStockPricesServerClient = grpc.ServerStreamingClient[StockResponse]
 
 func (c *greeterClient) StreamStockPricesClient(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[StockRequestT, StockResponseT], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -83,13 +85,27 @@ func (c *greeterClient) StreamStockPricesClient(ctx context.Context, opts ...grp
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Greeter_StreamStockPricesClientClient = grpc.ClientStreamingClient[StockRequestT, StockResponseT]
 
+func (c *greeterClient) StreamStockPricesBi(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[StockRequestT, StockResponseT], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &Greeter_ServiceDesc.Streams[2], Greeter_StreamStockPricesBi_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StockRequestT, StockResponseT]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Greeter_StreamStockPricesBiClient = grpc.BidiStreamingClient[StockRequestT, StockResponseT]
+
 // GreeterServer is the server API for Greeter service.
 // All implementations must embed UnimplementedGreeterServer
 // for forward compatibility.
 type GreeterServer interface {
 	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
-	StreamStockPrices(*StockRequest, grpc.ServerStreamingServer[StockResponse]) error
+	StreamStockPricesServer(*StockRequest, grpc.ServerStreamingServer[StockResponse]) error
 	StreamStockPricesClient(grpc.ClientStreamingServer[StockRequestT, StockResponseT]) error
+	StreamStockPricesBi(grpc.BidiStreamingServer[StockRequestT, StockResponseT]) error
 	mustEmbedUnimplementedGreeterServer()
 }
 
@@ -103,11 +119,14 @@ type UnimplementedGreeterServer struct{}
 func (UnimplementedGreeterServer) SayHello(context.Context, *HelloRequest) (*HelloReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SayHello not implemented")
 }
-func (UnimplementedGreeterServer) StreamStockPrices(*StockRequest, grpc.ServerStreamingServer[StockResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method StreamStockPrices not implemented")
+func (UnimplementedGreeterServer) StreamStockPricesServer(*StockRequest, grpc.ServerStreamingServer[StockResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamStockPricesServer not implemented")
 }
 func (UnimplementedGreeterServer) StreamStockPricesClient(grpc.ClientStreamingServer[StockRequestT, StockResponseT]) error {
 	return status.Errorf(codes.Unimplemented, "method StreamStockPricesClient not implemented")
+}
+func (UnimplementedGreeterServer) StreamStockPricesBi(grpc.BidiStreamingServer[StockRequestT, StockResponseT]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamStockPricesBi not implemented")
 }
 func (UnimplementedGreeterServer) mustEmbedUnimplementedGreeterServer() {}
 func (UnimplementedGreeterServer) testEmbeddedByValue()                 {}
@@ -148,16 +167,16 @@ func _Greeter_SayHello_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Greeter_StreamStockPrices_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _Greeter_StreamStockPricesServer_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(StockRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(GreeterServer).StreamStockPrices(m, &grpc.GenericServerStream[StockRequest, StockResponse]{ServerStream: stream})
+	return srv.(GreeterServer).StreamStockPricesServer(m, &grpc.GenericServerStream[StockRequest, StockResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Greeter_StreamStockPricesServer = grpc.ServerStreamingServer[StockResponse]
+type Greeter_StreamStockPricesServerServer = grpc.ServerStreamingServer[StockResponse]
 
 func _Greeter_StreamStockPricesClient_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(GreeterServer).StreamStockPricesClient(&grpc.GenericServerStream[StockRequestT, StockResponseT]{ServerStream: stream})
@@ -165,6 +184,13 @@ func _Greeter_StreamStockPricesClient_Handler(srv interface{}, stream grpc.Serve
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Greeter_StreamStockPricesClientServer = grpc.ClientStreamingServer[StockRequestT, StockResponseT]
+
+func _Greeter_StreamStockPricesBi_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GreeterServer).StreamStockPricesBi(&grpc.GenericServerStream[StockRequestT, StockResponseT]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Greeter_StreamStockPricesBiServer = grpc.BidiStreamingServer[StockRequestT, StockResponseT]
 
 // Greeter_ServiceDesc is the grpc.ServiceDesc for Greeter service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -180,13 +206,19 @@ var Greeter_ServiceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "StreamStockPrices",
-			Handler:       _Greeter_StreamStockPrices_Handler,
+			StreamName:    "StreamStockPricesServer",
+			Handler:       _Greeter_StreamStockPricesServer_Handler,
 			ServerStreams: true,
 		},
 		{
 			StreamName:    "StreamStockPricesClient",
 			Handler:       _Greeter_StreamStockPricesClient_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "StreamStockPricesBi",
+			Handler:       _Greeter_StreamStockPricesBi_Handler,
+			ServerStreams: true,
 			ClientStreams: true,
 		},
 	},

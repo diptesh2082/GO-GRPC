@@ -17,7 +17,7 @@ import (
 //     // pb.UnimplementedStockServiceServer
 // }
 // StreamStockPrices streams stock prices to the client
-func (s *server) tStreamStockPrices(req *pb.StockRequest, stream pb.Greeter_StreamStockPricesServer) error {
+func (s *server) tStreamStockPrices(req *pb.StockRequest, stream pb.Greeter_StreamStockPricesServerServer) error {
     log.Printf("Received request for stock: %s", req.StockSymbol)
     rand.Seed(time.Now().UnixNano())
 

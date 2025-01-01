@@ -24,7 +24,7 @@ func (s *server) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloR
 }
 
 // StreamStockPrices streams stock prices to the client
-func (s *server) StreamStockPrices(req *pb.StockRequest, stream pb.Greeter_StreamStockPricesServer) error {
+func (s *server) StreamStockPricesServer(req *pb.StockRequest, stream pb.Greeter_StreamStockPricesServerServer) error {
     log.Printf("Received request for stock: %s", req.StockSymbol)
     rand.Seed(time.Now().UnixNano())
 
@@ -68,6 +68,42 @@ func (s *server) StreamStockPricesClient(stream pb.Greeter_StreamStockPricesClie
         log.Printf("Received: %s with price: %.2f", req.StockSymbol, req.Price)
         count++
     }
+}
+
+// StreamStockPrices handles bidirectional streaming
+func (s *server) StreamStockPricesBi(stream pb.Greeter_StreamStockPricesBiServer) error {
+    log.Println("Bidirectional streaming started...")
+
+    go func() {
+        for {
+            req, err := stream.Recv()
+            if err == io.EOF {
+                log.Println("Client has finished sending data.")
+                break
+            }
+            if err != nil {
+                log.Printf("Error receiving data: %v", err)
+                break
+            }
+            log.Printf("Received stock: %s with price: %.2f", req.StockSymbol, req.Price)
+        }
+    }()
+
+    ticker := time.NewTicker(2 * time.Second)
+    defer ticker.Stop()
+
+    for range ticker.C {
+        response := &pb.StockResponseT{
+            Message: "Keep sending prices...",
+        }
+        if err := stream.Send(response); err != nil {
+            log.Printf("Error sending data: %v", err)
+            return err
+        }
+        log.Println("Sent: Keep sending prices...")
+    }
+
+    return nil
 }
 
 func main() {
