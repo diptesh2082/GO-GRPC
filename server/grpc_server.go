@@ -32,7 +32,7 @@ func (s *server) StreamStockPricesServer(req *pb.StockRequest, stream pb.Greeter
 
 	// Simulate streaming stock prices
 	for i := 0; i < 10; i++ {
-		price := rand.Float32()*100 + 50 // Random price between 50 and 150
+		price := rand.Float32()*100 + 50
 		timestamp := time.Now().Format(time.RFC3339)
 
 		res := &pb.StockResponse{
@@ -45,7 +45,7 @@ func (s *server) StreamStockPricesServer(req *pb.StockRequest, stream pb.Greeter
 			return err
 		}
 
-		time.Sleep(1 * time.Second) // Simulate delay between updates
+		time.Sleep(1 * time.Second)
 	}
 
 	return nil
